@@ -74,10 +74,12 @@ class AppLockService : Service() {
             Log.d("AppLockService", "Current top app: $currentApp")
 
             val sharedPreferences = getSharedPreferences("AppLockPrefs", Context.MODE_PRIVATE)
-            val lockedPackage = sharedPreferences.getString("selected_package_name", null)
+            val lockedPackages = sharedPreferences.getStringSet("selected_package_names", emptySet())
 
-            if (currentApp == lockedPackage) {
-                showLockScreen()
+            if (lockedPackages != null) {
+                if (currentApp in lockedPackages) {
+                    showLockScreen()
+                }
             }
         } else {
             Log.d("AppLockService", "No usage stats available.")
@@ -125,4 +127,5 @@ class AppLockService : Service() {
             .build()
     }
 }
+
 
