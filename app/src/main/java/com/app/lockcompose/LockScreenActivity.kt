@@ -1,6 +1,7 @@
 package com.app.lockcompose
 
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -20,6 +21,7 @@ import androidx.core.content.ContextCompat
 
 class LockScreenActivity : AppCompatActivity() {
 
+    private lateinit var appLockManager: AppLockManager
     private lateinit var lockUi : LinearLayout
     private lateinit var askPermissionBtn : Button
     companion object {
@@ -40,6 +42,9 @@ class LockScreenActivity : AppCompatActivity() {
                 showPassCodeUi()
             }
         }
+
+
+        appLockManager = AppLockManager(this)
 
     }
 
@@ -66,8 +71,7 @@ class LockScreenActivity : AppCompatActivity() {
             val passcode = passcodeBuilder.toString()
             if (passcode == "1234") {
                 edit.text.clear()
-                stopServices()
-                lockUi.visibility = View.GONE
+                removePackage()
                 finishAffinity()
             } else {
                 Toast.makeText(this,"Pass code is wrong",Toast.LENGTH_LONG).show()
@@ -106,9 +110,44 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
 
-    private fun stopServices(){
-        val intent = Intent(this, AppLockService::class.java)
-        stopService(intent)
+//    private fun removePackage(){
+//        val packageName = intent.getStringExtra("PACKAGE_NAME")
+//        if (packageName != null) {
+//            val lockedPackages = appLockManager.getSelectedPackages()
+//            if (lockedPackages.contains(packageName)) {
+//                appLockManager.removePackage(packageName)
+//            }
+//        }
+//    }
+
+    private fun removePackage() {
+        val packageName = intent.getStringExtra("PACKAGE_NAME")
+        if (packageName != null) {
+            val lockedPackages = appLockManager.getSelectedPackages()
+            if (lockedPackages.contains(packageName)) {
+                appLockManager.removePackage(packageName)
+                updateAccessList(packageName)
+                sendBroadcast(Intent(packageName).apply {
+                    putExtra("PACKAGE_NAME", packageName)
+                })
+            }
+        }
+    }
+
+
+    private fun updateAccessList(packageName: String) {
+        val sharedPreferences = getSharedPreferences("AppLockPrefs", Context.MODE_PRIVATE)
+        val selectedPackageNames = sharedPreferences.getStringSet("selected_package_names", emptySet())?.toMutableSet() ?: mutableSetOf()
+
+        if (!selectedPackageNames.contains(packageName)) {
+            val accessList = sharedPreferences.getStringSet("access_list", emptySet())?.toMutableSet() ?: mutableSetOf()
+            accessList.remove(packageName)
+
+            with(sharedPreferences.edit()) {
+                putStringSet("access_list", accessList)
+                apply()
+            }
+        }
     }
 }
 

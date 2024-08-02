@@ -24,6 +24,7 @@ class AppLockService : Service() {
         private const val NOTIFICATION_ID = 1
     }
 
+    private lateinit var appLockManager: AppLockManager
     private val handler = Handler(Looper.getMainLooper())
     private val runnable = object : Runnable {
         override fun run() {
@@ -34,6 +35,7 @@ class AppLockService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        appLockManager = AppLockManager(this)
         createNotificationChannel()
         val notification = createNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -46,10 +48,6 @@ class AppLockService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            "SHOW_LOCK_SCREEN" -> showLockScreen()
-            else -> return START_STICKY
-        }
         return START_STICKY
     }
 
@@ -73,12 +71,11 @@ class AppLockService : Service() {
             val currentApp = sortedStats.firstOrNull()?.packageName
             Log.d("AppLockService", "Current top app: $currentApp")
 
-            val sharedPreferences = getSharedPreferences("AppLockPrefs", Context.MODE_PRIVATE)
-            val lockedPackages = sharedPreferences.getStringSet("selected_package_names", emptySet())
+            val lockedPackages = appLockManager.getSelectedPackages()
 
-            if (lockedPackages != null) {
-                if (currentApp in lockedPackages) {
-                    showLockScreen()
+            if (currentApp in lockedPackages) {
+                if (currentApp != null) {
+                    showLockScreen(currentApp)
                 }
             }
         } else {
@@ -86,19 +83,19 @@ class AppLockService : Service() {
         }
     }
 
-    private fun showLockScreen() {
+    private fun showLockScreen(packageName: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Use TYPE_APPLICATION_OVERLAY for newer versions
             val lockIntent = Intent(this, LockScreenActivity::class.java)
+            lockIntent.putExtra("PACKAGE_NAME", packageName)
             lockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             startActivity(lockIntent)
-            Log.d("AppLockService", "Lock screen shown.")
+            Log.d("AppLockService", "Lock screen shown for package: $packageName")
         } else {
-            // Use TYPE_PHONE for older versions
             val lockIntent = Intent(this, LockScreenActivity::class.java)
+            lockIntent.putExtra("PACKAGE_NAME", packageName)
             lockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             startActivity(lockIntent)
-            Log.d("AppLockService", "Lock screen shown.")
+            Log.d("AppLockService", "Lock screen shown for package: $packageName")
         }
     }
 
@@ -123,9 +120,7 @@ class AppLockService : Service() {
             .setContentText("App lock service is running")
             .setSmallIcon(R.drawable.baseline_lock_24)
             .setContentIntent(pendingIntent)
-            .setOngoing(true) // Makes the notification ongoing
+            .setOngoing(true)
             .build()
     }
 }
-
-

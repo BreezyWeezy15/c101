@@ -57,24 +57,27 @@ import com.app.lockcompose.R
 @Composable
 fun ShowAppList() {
     val context = LocalContext.current
+    val sharedPreferences = context.getSharedPreferences("AppLockPrefs", Context.MODE_PRIVATE)
+
     val allApps = remember { getInstalledApps(context) }
     var availableApps by remember { mutableStateOf(allApps.toMutableList()) }
-    var selectedApps by remember { mutableStateOf(mutableListOf<InstalledApp>()) }
+    var selectedApps by remember { mutableStateOf(allApps.filter {
+        it.packageName in (sharedPreferences.getStringSet("selected_package_names", emptySet()) ?: emptySet())
+    }.toMutableList()) }
     var expanded by remember { mutableStateOf(false) }
     val timeIntervals = arrayOf("1 min", "15 min", "30 min", "45 min", "60 min", "75 min", "90 min", "120 min")
     var selectedInterval by remember { mutableStateOf(timeIntervals[0]) }
 
     // Save selected package names to SharedPreferences
     fun saveSelectedPackages() {
-        val packageNames = selectedApps.map { it.packageName }
-        val sharedPreferences = context.getSharedPreferences("AppLockPrefs", Context.MODE_PRIVATE)
+        val packageNames = selectedApps.map { it.packageName }.toSet()
         with(sharedPreferences.edit()) {
-            putStringSet("selected_package_names", packageNames.toSet())
+            putStringSet("selected_package_names", packageNames)
             apply()
         }
     }
 
-    
+
     LaunchedEffect(Unit) {
         val serviceIntent = Intent(context, AppLockService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -83,6 +86,7 @@ fun ShowAppList() {
             context.startService(serviceIntent)
         }
     }
+
 
     Column(
         modifier = Modifier
@@ -202,7 +206,9 @@ fun AppListItem(app: InstalledApp, isSelected: Boolean, onClick: () -> Unit) {
         Text(
             text = app.name,
             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 20.sp), // Increased size of the text
-            modifier = Modifier.weight(1f).fillMaxWidth(), // Fill remaining space
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(), // Fill remaining space
             textAlign = TextAlign.Center, // Center the text
             color = MaterialTheme.colorScheme.onSurface
         )
