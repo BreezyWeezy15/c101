@@ -1,6 +1,8 @@
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -77,7 +79,7 @@ fun ShowAppList() {
         }
     }
 
-
+    // Start the PackageRemovalService
     LaunchedEffect(Unit) {
         val serviceIntent = Intent(context, AppLockService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -85,8 +87,26 @@ fun ShowAppList() {
         } else {
             context.startService(serviceIntent)
         }
-    }
 
+        val updateReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                // Reload the selected and available apps
+                val updatedSelectedApps = allApps.filter {
+                    it.packageName in (sharedPreferences.getStringSet("selected_package_names", emptySet()) ?: emptySet())
+                }
+                selectedApps = updatedSelectedApps.toMutableList()
+                availableApps = allApps.filter { it.packageName !in updatedSelectedApps.map { app -> app.packageName } }.toMutableList()
+            }
+        }
+
+        val filter = IntentFilter("UPDATE_APP_LIST")
+        context.registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+
+
+//        onDispose {
+//            context.unregisterReceiver(updateReceiver)
+//        }
+    }
 
     Column(
         modifier = Modifier

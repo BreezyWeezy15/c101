@@ -110,15 +110,7 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
 
-//    private fun removePackage(){
-//        val packageName = intent.getStringExtra("PACKAGE_NAME")
-//        if (packageName != null) {
-//            val lockedPackages = appLockManager.getSelectedPackages()
-//            if (lockedPackages.contains(packageName)) {
-//                appLockManager.removePackage(packageName)
-//            }
-//        }
-//    }
+
 
     private fun removePackage() {
         val packageName = intent.getStringExtra("PACKAGE_NAME")
@@ -127,9 +119,10 @@ class LockScreenActivity : AppCompatActivity() {
             if (lockedPackages.contains(packageName)) {
                 appLockManager.removePackage(packageName)
                 updateAccessList(packageName)
-                sendBroadcast(Intent(packageName).apply {
-                    putExtra("PACKAGE_NAME", packageName)
-                })
+                // Send a broadcast when a package is removed
+                val intent = Intent("PACKAGE_REMOVED")
+                intent.putExtra("PACKAGE_NAME", packageName)
+                sendBroadcast(intent)
             }
         }
     }

@@ -6,8 +6,11 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.app.usage.UsageStatsManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Handler
@@ -25,6 +28,7 @@ class AppLockService : Service() {
     }
 
     private lateinit var appLockManager: AppLockManager
+    private lateinit var sharedPreferences: SharedPreferences
     private val handler = Handler(Looper.getMainLooper())
     private val runnable = object : Runnable {
         override fun run() {
@@ -33,9 +37,24 @@ class AppLockService : Service() {
         }
     }
 
+    private val packageRemovalReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == "PACKAGE_REMOVED") {
+                val packageName = intent.getStringExtra("PACKAGE_NAME")
+                packageName?.let {
+                    removePackageFromAccessList(it)
+                    // Send an update broadcast
+                    val updateIntent = Intent("UPDATE_APP_LIST")
+                    sendBroadcast(updateIntent)
+                }
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         appLockManager = AppLockManager(this)
+        sharedPreferences = getSharedPreferences("AppLockPrefs", Context.MODE_PRIVATE)
         createNotificationChannel()
         val notification = createNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -44,6 +63,7 @@ class AppLockService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
         handler.post(runnable)
+        registerReceiver(packageRemovalReceiver, IntentFilter("PACKAGE_REMOVED"))
         Log.d("AppLockService", "Service created and runnable posted.")
     }
 
@@ -54,6 +74,7 @@ class AppLockService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(runnable)
+        unregisterReceiver(packageRemovalReceiver)
         Log.d("AppLockService", "Service destroyed and runnable removed.")
     }
 
@@ -84,19 +105,11 @@ class AppLockService : Service() {
     }
 
     private fun showLockScreen(packageName: String) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val lockIntent = Intent(this, LockScreenActivity::class.java)
-            lockIntent.putExtra("PACKAGE_NAME", packageName)
-            lockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            startActivity(lockIntent)
-            Log.d("AppLockService", "Lock screen shown for package: $packageName")
-        } else {
-            val lockIntent = Intent(this, LockScreenActivity::class.java)
-            lockIntent.putExtra("PACKAGE_NAME", packageName)
-            lockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            startActivity(lockIntent)
-            Log.d("AppLockService", "Lock screen shown for package: $packageName")
-        }
+        val lockIntent = Intent(this, LockScreenActivity::class.java)
+        lockIntent.putExtra("PACKAGE_NAME", packageName)
+        lockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        startActivity(lockIntent)
+        Log.d("AppLockService", "Lock screen shown for package: $packageName")
     }
 
     private fun createNotificationChannel() {
@@ -122,5 +135,24 @@ class AppLockService : Service() {
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
+    }
+
+    private fun removePackageFromAccessList(packageName: String) {
+        val selectedPackageNames = sharedPreferences.getStringSet("selected_package_names", emptySet())?.toMutableSet() ?: mutableSetOf()
+        if (selectedPackageNames.contains(packageName)) {
+            selectedPackageNames.remove(packageName)
+            with(sharedPreferences.edit()) {
+                putStringSet("selected_package_names", selectedPackageNames)
+                apply()
+            }
+
+            // Update access list in SharedPreferences
+            val accessList = sharedPreferences.getStringSet("access_list", emptySet())?.toMutableSet() ?: mutableSetOf()
+            accessList.remove(packageName)
+            with(sharedPreferences.edit()) {
+                putStringSet("access_list", accessList)
+                apply()
+            }
+        }
     }
 }
