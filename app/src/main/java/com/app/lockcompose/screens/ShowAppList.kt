@@ -1,5 +1,4 @@
 
-import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -14,11 +13,13 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,12 +27,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,14 +60,18 @@ import androidx.compose.ui.unit.sp
 import com.app.lockcompose.AppLockService
 
 
-
-
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
-@SuppressLint("UnspecifiedRegisterReceiverFlag")
 @Composable
 fun ShowAppList() {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("AppLockPrefs", Context.MODE_PRIVATE)
+
+    val isDarkTheme = isSystemInDarkTheme()
+    val backgroundColor = if (isDarkTheme) Color.Black else Color.White
+    val textColor = if (isDarkTheme) Color.White else Color.Black
+    val dropdownBackgroundColor = if (isDarkTheme) Color.Cyan else Color.White
+    val cardBackgroundColor = if (isDarkTheme) Color.DarkGray else Color.White
 
     val allApps = remember { getInstalledApps(context) }
     var availableApps by remember { mutableStateOf(allApps.toMutableList()) }
@@ -97,7 +109,7 @@ fun ShowAppList() {
         }
 
         val filter = IntentFilter("UPDATE_APP_LIST")
-        context.registerReceiver(updateReceiver, filter)
+        context.registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
 
 //        onDispose {
 //            context.unregisterReceiver(updateReceiver)
@@ -105,59 +117,63 @@ fun ShowAppList() {
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+        modifier = Modifier.background(backgroundColor)
     ) {
-        // Time Interval Dropdown with "Select Duration" Text
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .padding(16.dp)
-                .clickable { expanded = true },
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Select Duration",
-                modifier = Modifier.weight(1f),
-                color = Color.Black
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = selectedInterval,
-                color = Color.Black
-            )
-        }
 
-        DropdownMenu(
+        ExposedDropdownMenuBox(
             expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.background(Color.White)
+            onExpandedChange = { expanded = !expanded },
+            modifier = Modifier.padding(16.dp)
         ) {
-            timeIntervals.forEach { interval ->
-                DropdownMenuItem(
-                    onClick = {
-                        selectedInterval = interval
-                        expanded = false
-                    },
-                    text = {
-                        Text(interval, color = Color.Black)
-                    }
-                )
+            OutlinedTextField(
+                value = selectedInterval,
+                onValueChange = {},
+                label = { Text("Select Duration") },
+                readOnly = true,
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    containerColor = backgroundColor,
+                ),
+                trailingIcon = {
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+            )
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier
+                    .background(dropdownBackgroundColor)
+                    .width(150.dp)
+            ) {
+                timeIntervals.forEach { interval ->
+                    DropdownMenuItem(
+                        onClick = {
+                            selectedInterval = interval
+                            expanded = false // Close the menu when an item is selected
+                        },
+                        text = {
+                            Text(interval, color = textColor)
+                        }
+                    )
+                }
             }
         }
 
         // Selected Apps List
         Text(
             text = "Access List",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(vertical = 8.dp)
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 20.dp),
+            color = textColor
         )
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(15.dp)
+                .height(400.dp)
         ) {
             items(selectedApps) { app ->
                 AppListItem(
@@ -166,7 +182,9 @@ fun ShowAppList() {
                         selectedApps = (selectedApps - app).toMutableList()
                         availableApps = (availableApps + app).toMutableList()
                         saveSelectedPackages()
-                    }
+                    },
+                    textColor = textColor,
+                    cardBackgroundColor = cardBackgroundColor
                 )
             }
         }
@@ -174,13 +192,14 @@ fun ShowAppList() {
         // Available Apps List
         Text(
             text = "Available Apps",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(vertical = 8.dp)
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 20.dp),
+            color = textColor
         )
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 16.dp)
+                .padding(15.dp)
         ) {
             items(availableApps) { app ->
                 AppListItem(
@@ -189,7 +208,9 @@ fun ShowAppList() {
                         selectedApps = (selectedApps + app).toMutableList()
                         availableApps = (availableApps - app).toMutableList()
                         saveSelectedPackages()
-                    }
+                    },
+                    textColor = textColor,
+                    cardBackgroundColor = cardBackgroundColor
                 )
             }
         }
@@ -249,7 +270,7 @@ fun rememberDrawablePainter(drawable: Drawable?): Painter {
 }
 
 @Composable
-fun AppListItem(app: InstalledApp, onClick: () -> Unit) {
+fun AppListItem(app: InstalledApp, onClick: () -> Unit, textColor: Color, cardBackgroundColor: Color) {
     val iconPainter = rememberDrawablePainter(app.icon)
 
     Card(
@@ -259,7 +280,7 @@ fun AppListItem(app: InstalledApp, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White,
+            containerColor = cardBackgroundColor,
         ),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
@@ -275,7 +296,7 @@ fun AppListItem(app: InstalledApp, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(64.dp)
                     .clip(CircleShape)
-                    .background(Color.White)
+                    .background(cardBackgroundColor)
                     .padding(8.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -287,8 +308,9 @@ fun AppListItem(app: InstalledApp, onClick: () -> Unit) {
                     .weight(1f)
                     .fillMaxWidth(),
                 textAlign = TextAlign.Start,
-                color = Color.Black
+                color = textColor
             )
         }
     }
 }
+

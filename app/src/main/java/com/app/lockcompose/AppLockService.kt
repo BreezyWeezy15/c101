@@ -63,7 +63,12 @@ class AppLockService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
         handler.post(runnable)
-        registerReceiver(packageRemovalReceiver, IntentFilter("PACKAGE_REMOVED"))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+            registerReceiver(packageRemovalReceiver, IntentFilter("PACKAGE_REMOVED"), RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(packageRemovalReceiver, IntentFilter("PACKAGE_REMOVED"))
+        }
+
         Log.d("AppLockService", "Service created and runnable posted.")
     }
 
