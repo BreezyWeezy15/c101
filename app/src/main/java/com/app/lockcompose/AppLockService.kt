@@ -1,5 +1,6 @@
 package com.app.lockcompose
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -42,7 +43,7 @@ class AppLockService : Service() {
             if (intent.action == "PACKAGE_REMOVED") {
                 val packageName = intent.getStringExtra("PACKAGE_NAME")
                 packageName?.let {
-                    removePackageFromAccessList(it)
+                    appLockManager.removePackageFromAccessList(it)
                     // Send an update broadcast
                     val updateIntent = Intent("UPDATE_APP_LIST")
                     sendBroadcast(updateIntent)
@@ -51,6 +52,7 @@ class AppLockService : Service() {
         }
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate() {
         super.onCreate()
         appLockManager = AppLockManager(this)
@@ -63,13 +65,12 @@ class AppLockService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
         handler.post(runnable)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
             registerReceiver(packageRemovalReceiver, IntentFilter("PACKAGE_REMOVED"), RECEIVER_NOT_EXPORTED)
         } else {
             registerReceiver(packageRemovalReceiver, IntentFilter("PACKAGE_REMOVED"))
         }
 
-        Log.d("AppLockService", "Service created and runnable posted.")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -80,7 +81,6 @@ class AppLockService : Service() {
         super.onDestroy()
         handler.removeCallbacks(runnable)
         unregisterReceiver(packageRemovalReceiver)
-        Log.d("AppLockService", "Service destroyed and runnable removed.")
     }
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -114,7 +114,6 @@ class AppLockService : Service() {
         lockIntent.putExtra("PACKAGE_NAME", packageName)
         lockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         startActivity(lockIntent)
-        Log.d("AppLockService", "Lock screen shown for package: $packageName")
     }
 
     private fun createNotificationChannel() {
@@ -142,22 +141,4 @@ class AppLockService : Service() {
             .build()
     }
 
-    private fun removePackageFromAccessList(packageName: String) {
-        val selectedPackageNames = sharedPreferences.getStringSet("selected_package_names", emptySet())?.toMutableSet() ?: mutableSetOf()
-        if (selectedPackageNames.contains(packageName)) {
-            selectedPackageNames.remove(packageName)
-            with(sharedPreferences.edit()) {
-                putStringSet("selected_package_names", selectedPackageNames)
-                apply()
-            }
-
-            // Update access list in SharedPreferences
-            val accessList = sharedPreferences.getStringSet("access_list", emptySet())?.toMutableSet() ?: mutableSetOf()
-            accessList.remove(packageName)
-            with(sharedPreferences.edit()) {
-                putStringSet("access_list", accessList)
-                apply()
-            }
-        }
-    }
 }

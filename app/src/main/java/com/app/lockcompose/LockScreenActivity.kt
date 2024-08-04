@@ -1,12 +1,11 @@
 package com.app.lockcompose
 
 
-import android.content.Context
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.os.Bundle
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
@@ -24,9 +23,6 @@ class LockScreenActivity : AppCompatActivity() {
     private lateinit var appLockManager: AppLockManager
     private lateinit var lockUi : LinearLayout
     private lateinit var askPermissionBtn : Button
-    companion object {
-        private const val REQUEST_CODE_OVERLAY_PERMISSION = 1001
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,19 +31,16 @@ class LockScreenActivity : AppCompatActivity() {
         lockUi = findViewById(R.id.lockUi)
         askPermissionBtn = findViewById(R.id.askPermission)
         askPermissionBtn.setOnClickListener {
-            // show pass code ui
-            Log.d("TAGZZ","LOCKED")
             if (lockUi.visibility == View.GONE){
                 lockUi.visibility = View.VISIBLE
                 showPassCodeUi()
             }
         }
-
-
         appLockManager = AppLockManager(this)
 
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun showPassCodeUi(){
 
 
@@ -109,16 +102,13 @@ class LockScreenActivity : AppCompatActivity() {
         edit.compoundDrawablesRelative[2]?.colorFilter = colorFilter
     }
 
-
-
-
     private fun removePackage() {
         val packageName = intent.getStringExtra("PACKAGE_NAME")
         if (packageName != null) {
             val lockedPackages = appLockManager.getSelectedPackages()
             if (lockedPackages.contains(packageName)) {
                 appLockManager.removePackage(packageName)
-                updateAccessList(packageName)
+                appLockManager.updateAccessList(packageName)
                 // Send a broadcast when a package is removed
                 val intent = Intent("PACKAGE_REMOVED")
                 intent.putExtra("PACKAGE_NAME", packageName)
@@ -127,20 +117,5 @@ class LockScreenActivity : AppCompatActivity() {
         }
     }
 
-
-    private fun updateAccessList(packageName: String) {
-        val sharedPreferences = getSharedPreferences("AppLockPrefs", Context.MODE_PRIVATE)
-        val selectedPackageNames = sharedPreferences.getStringSet("selected_package_names", emptySet())?.toMutableSet() ?: mutableSetOf()
-
-        if (!selectedPackageNames.contains(packageName)) {
-            val accessList = sharedPreferences.getStringSet("access_list", emptySet())?.toMutableSet() ?: mutableSetOf()
-            accessList.remove(packageName)
-
-            with(sharedPreferences.edit()) {
-                putStringSet("access_list", accessList)
-                apply()
-            }
-        }
-    }
 }
 

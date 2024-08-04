@@ -1,4 +1,5 @@
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -9,7 +10,6 @@ import android.graphics.Canvas
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,7 +41,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,14 +57,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.app.lockcompose.AppLockManager
 import com.app.lockcompose.AppLockService
 
 
+@SuppressLint("UnspecifiedRegisterReceiverFlag")
 @OptIn(ExperimentalMaterial3Api::class)
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun ShowAppList() {
+
+
     val context = LocalContext.current
+    val appLockManager = AppLockManager(context)
     val sharedPreferences = context.getSharedPreferences("AppLockPrefs", Context.MODE_PRIVATE)
 
     val isDarkTheme = isSystemInDarkTheme()
@@ -84,13 +88,11 @@ fun ShowAppList() {
 
     fun saveSelectedPackages() {
         val packageNames = selectedApps.map { it.packageName }.toSet()
-        with(sharedPreferences.edit()) {
-            putStringSet("selected_package_names", packageNames)
-            apply()
-        }
+        appLockManager.addPackage(packageNames)
     }
 
-    LaunchedEffect(Unit) {
+    DisposableEffect(Unit) {
+
         val serviceIntent = Intent(context, AppLockService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(serviceIntent)
@@ -109,11 +111,15 @@ fun ShowAppList() {
         }
 
         val filter = IntentFilter("UPDATE_APP_LIST")
-        context.registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(updateReceiver, filter)
+        }
 
-//        onDispose {
-//            context.unregisterReceiver(updateReceiver)
-//        }
+        onDispose {
+            context.unregisterReceiver(updateReceiver)
+        }
     }
 
     Column(
