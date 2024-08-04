@@ -76,34 +76,24 @@ class MainActivity : ComponentActivity() {
             hasNotificationPermission.value = isNotificationPermissionGranted(context)
             isAccessibilityServiceEnabled.value = isAccessibilityServiceEnabled(context, RecentAppsAccessibilityService::class.java)
         }
-
-        // Permission request launchers
         val requestOverlayPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             updatePermissionStatus()
         }
-
         val requestUsageStatsPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             updatePermissionStatus()
         }
-
         val requestNotificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             updatePermissionStatus()
         }
-
         val requestAccessibilityPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             updatePermissionStatus()
         }
 
-        // Check if all permissions are granted
+
         fun hasAllPermissions(): Boolean {
             return hasUsageStatsPermission.value && hasOverlayPermission.value && hasNotificationPermission.value && isAccessibilityServiceEnabled.value
         }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             // Display permission rows
             PermissionRow(
                 label = "Overlay Permission",
@@ -168,16 +158,12 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+
+
     }
 
-
-
     @Composable
-    fun PermissionRow(
-        label: String,
-        isGranted: Boolean,
-        onClick: () -> Unit
-    ) {
+    fun PermissionRow(label: String, isGranted: Boolean, onClick: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -196,17 +182,14 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
-
     private fun hasUsageStatsPermission(context: Context): Boolean {
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), context.packageName)
         return mode == AppOpsManager.MODE_ALLOWED
     }
-
     private fun hasOverlayPermission(context: Context): Boolean {
         return Settings.canDrawOverlays(context)
     }
-
     private fun isNotificationPermissionGranted(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -214,7 +197,6 @@ class MainActivity : ComponentActivity() {
             true
         }
     }
-
     private fun isAccessibilityServiceEnabled(context: Context, service: Class<out AccessibilityService>): Boolean {
         val enabledServices = Settings.Secure.getString(
             context.contentResolver,
@@ -228,4 +210,5 @@ class MainActivity : ComponentActivity() {
         val componentNameString = ComponentName(context, service).flattenToString()
         return colonSplitter.iterator().asSequence().any { it.equals(componentNameString, ignoreCase = true) }
     }
+
 }

@@ -82,6 +82,7 @@ fun ShowAppList() {
     var selectedApps by remember { mutableStateOf(allApps.filter {
         it.packageName in (sharedPreferences.getStringSet("selected_package_names", emptySet()) ?: emptySet())
     }.toMutableList()) }
+
     var expanded by remember { mutableStateOf(false) }
     val timeIntervals = arrayOf("1 min", "15 min", "30 min", "45 min", "60 min", "75 min", "90 min", "120 min")
     var selectedInterval by remember { mutableStateOf(timeIntervals[0]) }

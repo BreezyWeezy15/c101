@@ -13,7 +13,6 @@ class RecentAppsAccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG = "RecentAppsService"
     }
-
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         Log.d(TAG, "Event: $event")
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
@@ -27,7 +26,6 @@ class RecentAppsAccessibilityService : AccessibilityService() {
             }
         }
     }
-
     private fun isRecentAppsScreen(packageName: String, className: String): Boolean {
         val recentAppsPackages = listOf(
             "com.android.systemui",      // Stock Android
@@ -49,17 +47,17 @@ class RecentAppsAccessibilityService : AccessibilityService() {
 
         return recentAppsPackages.contains(packageName) && recentAppsClasses.any { className.contains(it, ignoreCase = true) }
     }
-
     override fun onInterrupt() {
         // Handle interruptions if needed
     }
-
     private fun triggerLockScreen() {
         val intent = Intent(this, LockScreenActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         ContextCompat.startActivity(this, intent, null)
     }
+
+
 }
 
 
