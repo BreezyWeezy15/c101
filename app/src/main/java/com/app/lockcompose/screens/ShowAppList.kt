@@ -27,19 +27,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.Icon
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -74,7 +70,7 @@ fun ShowAppList() {
     val isDarkTheme = isSystemInDarkTheme()
     val backgroundColor = if (isDarkTheme) Color.Black else Color.White
     val textColor = if (isDarkTheme) Color.White else Color.Black
-    val dropdownBackgroundColor = if (isDarkTheme) Color.Cyan else Color.White
+    val dropdownBackgroundColor = if (isDarkTheme) Color.DarkGray else Color.White
     val cardBackgroundColor = if (isDarkTheme) Color.DarkGray else Color.White
 
     val allApps = remember { getInstalledApps(context) }
@@ -84,8 +80,8 @@ fun ShowAppList() {
     }.toMutableList()) }
 
     var expanded by remember { mutableStateOf(false) }
+    var selectedInterval by remember { mutableStateOf("") }
     val timeIntervals = arrayOf("1 min", "15 min", "30 min", "45 min", "60 min", "75 min", "90 min", "120 min")
-    var selectedInterval by remember { mutableStateOf(timeIntervals[0]) }
 
     fun saveSelectedPackages() {
         val packageNames = selectedApps.map { it.packageName }.toSet()
@@ -129,45 +125,42 @@ fun ShowAppList() {
 
         ExposedDropdownMenuBox(
             expanded = expanded,
-            onExpandedChange = { expanded = !expanded },
-            modifier = Modifier.padding(16.dp)
+            onExpandedChange = { expanded = it },
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+                .background(color = dropdownBackgroundColor)
         ) {
             OutlinedTextField(
+                label = { Text(text = "Select Duration") },
                 value = selectedInterval,
                 onValueChange = {},
-                label = { Text("Select Duration") },
                 readOnly = true,
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    containerColor = backgroundColor,
-                ),
                 trailingIcon = {
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 },
+                colors = ExposedDropdownMenuDefaults.textFieldColors(),
                 modifier = Modifier
+                    .menuAnchor()
                     .fillMaxWidth()
-                    .clickable { expanded = !expanded }
             )
 
-            DropdownMenu(
+            ExposedDropdownMenu(
                 expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier
-                    .background(dropdownBackgroundColor)
-                    .width(150.dp)
+                onDismissRequest = { expanded = false }
             ) {
                 timeIntervals.forEach { interval ->
                     DropdownMenuItem(
+                        text = { Text(text = interval) },
                         onClick = {
                             selectedInterval = interval
-                            expanded = false // Close the menu when an item is selected
-                        },
-                        text = {
-                            Text(interval, color = textColor)
+                            expanded = false
                         }
                     )
                 }
             }
         }
+
 
         // Selected Apps List
         Text(
@@ -323,4 +316,3 @@ fun AppListItem(app: InstalledApp, onClick: () -> Unit, textColor: Color, cardBa
         }
     }
 }
-

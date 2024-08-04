@@ -11,14 +11,12 @@ class AppLockManager(context: Context) {
     fun getSelectedPackages(): Set<String> {
         return sharedPreferences.getStringSet("selected_package_names", emptySet()) ?: emptySet()
     }
-
     fun addPackage(packageName:  Set<String>) {
         with(sharedPreferences.edit()) {
             putStringSet("selected_package_names", packageName)
             apply()
         }
     }
-
     fun removePackage(packageName: String) {
         val packageNames = getSelectedPackages().toMutableSet()
         packageNames.remove(packageName)
@@ -27,7 +25,6 @@ class AppLockManager(context: Context) {
             apply()
         }
     }
-
     fun updateAccessList(packageName: String) {
         val selectedPackageNames = sharedPreferences.getStringSet("selected_package_names", emptySet())?.toMutableSet() ?: mutableSetOf()
 
@@ -41,7 +38,6 @@ class AppLockManager(context: Context) {
             }
         }
     }
-
     fun removePackageFromAccessList(packageName: String) {
         val selectedPackageNames = sharedPreferences.getStringSet("selected_package_names", emptySet())?.toMutableSet() ?: mutableSetOf()
         if (selectedPackageNames.contains(packageName)) {
@@ -60,4 +56,5 @@ class AppLockManager(context: Context) {
             }
         }
     }
+    
 }
